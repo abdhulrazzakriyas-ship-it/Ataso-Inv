@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ataso Stationery & Book Inventory ERP</title>
+  
+  <!-- Supabase JS Client via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <!-- HTML5 Camera Barcode Scanner Library via CDN -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <!-- HTML2PDF Library for Clean PDF Bill & Report Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Flat Design Stylesheet -->
+  <link rel="stylesheet" href="style.css?v=1.0.5">
+</head>
+<body>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer"></div>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <a href="#" class="brand-logo" data-nav="dashboard">
+          <div class="brand-icon">📚</div>
+          <div class="brand-title">ATASO <span>ERP</span></div>
+        </a>
+
+        <!-- Breadcrumbs -->
+        <nav id="breadcrumbTrail" class="breadcrumb-container">
+          <span class="breadcrumb-item active">Dashboard</span>
+        </nav>
+      </div>
+
+      <!-- Desktop Search -->
+      <div class="header-search">
+        <input type="text" id="globalSearchInput" placeholder="Search name, barcode (123456...) or category...">
+      </div>
+
+      <!-- Right Header Actions -->
+      <div class="header-actions">
+        <!-- Live Supabase Auto-Sync Badge -->
+        <div id="supabaseSyncBadge" class="supabase-sync-badge" title="Live Supabase Cloud Auto-Sync Active">
+          ☁️ Supabase: Connected
+        </div>
+
+        <!-- Dark / Light Theme Switcher Button -->
+        <button type="button" id="themeToggleBtn" class="theme-toggle-btn">
+          <span id="themeToggleIcon">☀️</span>
+          <span id="themeToggleLabel" style="display: none; @media(min-width:640px){display:inline;}">Light</span>
+        </button>
+
+        <!-- 🧾 Sales & New Sale Shortcuts -->
+        <button type="button" class="btn-secondary" data-nav="sales" style="padding: 6px 12px; min-height: 38px; font-size: 12px;">
+          <span>🧾 Sales</span>
+        </button>
+
+        <button type="button" class="btn-primary" data-nav="new-sale" style="padding: 6px 12px; min-height: 38px; font-size: 12px;">
+          <span>➕ New Sale</span>
+        </button>
+
+        <button type="button" class="btn-secondary" data-nav="raw-materials" style="padding: 6px 12px; min-height: 38px; font-size: 12px;">
+          <span>📄 Raw Mat</span>
+        </button>
+
+        <!-- 📷 Scan Barcode Shortcut -->
+        <button type="button" class="btn-secondary" data-nav="scan" style="padding: 6px 12px; min-height: 38px; font-size: 12px;">
+          <span>📷 Scan</span>
+        </button>
+
+        <!-- + ADD ITEM Button -->
+        <button type="button" class="btn-primary" data-action="add-item" style="padding: 8px 14px; min-height: 40px; font-size: 12px;">
+          <span>+ ADD ITEM</span>
+        </button>
+
+        <a href="#" class="restock-btn-badge" data-nav="low-stock">
+          <span>🚨 Alerts</span>
+          <span class="count-pill" id="headerAlertBadge">0</span>
+        </a>
+
+        <div class="user-profile-badge">
+          <div class="user-avatar">A</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Layout Wrapper -->
+  <div class="layout-wrapper">
+
+    <!-- Desktop Left Sidebar -->
+    <aside class="app-sidebar">
+      <!-- Group 1: MAIN MODULES -->
+      <div class="sidebar-group">
+        <div class="nav-section-title">MAIN</div>
+        <ul class="nav-list">
+          <li>
+            <a href="#" class="nav-link active" data-nav="dashboard">
+              <span>🏠 Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-nav="inventory">
+              <span>📦 Inventory</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-nav="scan">
+              <span>📷 Barcode Scanner</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-nav="categories">
+              <span>📁 Categories</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Group 2: SALES MODULES -->
+      <div class="sidebar-group">
+        <div class="nav-section-title">SALES</div>
+        <ul class="nav-list">
+          <li>
+            <a href="#" class="nav-link" data-nav="sales">
+              <span>🧾 Sales Hub</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-nav="new-sale">
+              <span>➕ New Sale / Bill</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-nav="sales-history">
+              <span>📜 Sales History</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Group 3: STOCK MODULES -->
+      <div class="sidebar-group">
+        <div class="nav-section-title">STOCK</div>
+        <ul class="nav-list">
+          <li>
+            <a href="#" class="nav-link" data-nav="raw-materials">
+              <span>📄 Raw Materials</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-nav="low-stock">
+              <span>🚨 Low Stock</span>
+              <span class="count-badge" id="sidebarLowBadge">0</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-nav="out-of-stock">
+              <span>⛔ Out of Stock</span>
+              <span class="count-badge" id="sidebarOutBadge" style="background-color: var(--color-red); color: white;">0</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Group 3: SYSTEM -->
+      <div class="sidebar-group" style="margin-top: auto;">
+        <div class="nav-section-title">SYSTEM</div>
+        <ul class="nav-list">
+          <li>
+            <a href="#" class="nav-link" data-nav="settings">
+              <span>⚙️ Settings</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div style="padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 11px; color: var(--color-muted); font-weight: 700;">
+        Ataso ERP v1.0 • Stationery Management
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- VIEW 1: DASHBOARD -->
+      <section id="viewDashboard" class="view-pane">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">ERP Dashboard</h1>
+            <p class="page-header-sub">Real-time inventory metrics, barcode scanner & stock alerts.</p>
+          </div>
+          <div class="page-actions-group">
+            <button type="button" class="btn-primary" data-nav="scan">📷 SCAN BARCODE</button>
+            <button type="button" class="btn-secondary" data-action="add-item">+ ADD ITEM</button>
+            <button type="button" class="btn-secondary" data-action="add-category">+ ADD CATEGORY</button>
+          </div>
+        </div>
+
+        <!-- Metric Overview Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-title">TOTAL ITEMS</span>
+            <span class="metric-value" id="metricTotalItems">0</span>
+            <span class="metric-sub">Configured Stationery</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-title">IN STOCK</span>
+            <span class="metric-value" id="metricInStock" style="color: var(--color-emerald);">0</span>
+            <span class="metric-sub">Healthy Quantity Levels</span>
+          </div>
+          <div class="metric-card highlight-low">
+            <span class="metric-title">LOW STOCK</span>
+            <span class="metric-value" id="metricLowStock">0</span>
+            <span class="metric-sub">Requires Restocking</span>
+          </div>
+          <div class="metric-card highlight-out">
+            <span class="metric-title">OUT OF STOCK</span>
+            <span class="metric-value" id="metricOutOfStock">0</span>
+            <span class="metric-sub">Zero Quantity Items</span>
+          </div>
+        </div>
+
+        <!-- ERP Quick Actions Bar -->
+        <div class="section-box" style="padding: 16px; margin-bottom: 24px;">
+          <div style="font-size: 11px; font-weight: 900; color: var(--color-muted); text-transform: uppercase; margin-bottom: 10px;">Quick ERP Actions</div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn-primary" data-nav="scan" style="min-height: 38px; font-size: 12px;">📷 Scan Barcode</button>
+            <button type="button" class="btn-secondary" data-action="add-item" style="min-height: 38px; font-size: 12px;">+ Add Item</button>
+            <button type="button" class="btn-secondary" data-action="add-category" style="min-height: 38px; font-size: 12px;">+ Add Category</button>
+            <button type="button" class="btn-dark" data-nav="low-stock" style="min-height: 38px; font-size: 12px;">🚨 Low Stock</button>
+            <button type="button" class="btn-secondary" data-nav="inventory" style="min-height: 38px; font-size: 12px;">📦 Inventory</button>
+          </div>
+        </div>
+
+        <!-- MAIN FEATURE: URGENT LOW STOCK ITEMS -->
+        <div class="section-box urgent-low-box">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">🚨 URGENT LOW STOCK ITEMS</h2>
+              <p style="font-size: 12px; color: var(--color-muted); font-weight: 600; margin-top: 2px;">
+                Sorted by urgency (Lowest quantity first). Showing all items below threshold.
+              </p>
+            </div>
+            <button type="button" class="btn-secondary" data-nav="low-stock">View Full List →</button>
+          </div>
+
+          <div id="dashboardLowStockContainer" class="mobile-cards-container"></div>
+
+          <div class="desktop-table-container">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Item / Description</th>
+                  <th>Barcode</th>
+                  <th style="text-align: right;">Ream Cost</th>
+                  <th style="text-align: right;">Cost Rate (Sell)</th>
+                  <th style="text-align: right;">Retail Rate (Shop)</th>
+                  <th style="text-align: center;">Current Qty</th>
+                  <th style="text-align: center;">Limit</th>
+                  <th style="text-align: center;">Status</th>
+                  <th style="text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dashboardLowStockTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- OUT OF STOCK SECTION -->
+        <div class="section-box">
+          <div class="section-header">
+            <h2 class="section-title">⛔ OUT OF STOCK ITEMS</h2>
+            <button type="button" class="btn-secondary" data-nav="out-of-stock">View Full List →</button>
+          </div>
+
+          <div id="dashboardOutContainer" class="mobile-cards-container"></div>
+
+          <div class="desktop-table-container">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Item / Description</th>
+                  <th>Barcode</th>
+                  <th style="text-align: right;">Ream Cost</th>
+                  <th style="text-align: right;">Cost Rate (Sell)</th>
+                  <th style="text-align: right;">Retail Rate (Shop)</th>
+                  <th style="text-align: center;">Current Qty</th>
+                  <th style="text-align: center;">Limit</th>
+                  <th style="text-align: center;">Status</th>
+                  <th style="text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dashboardOutTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: BARCODE SCANNER MODULE (#viewScan) -->
+      <section id="viewScan" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">📷 Barcode Scanner System</h1>
+            <p class="page-header-sub">Scan camera barcodes or use USB/Bluetooth barcode scanner inputs.</p>
+          </div>
+          <button type="button" id="startCameraBtn" class="btn-primary">📷 Toggle Camera Scanner</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(1, 1fr); @media(min-width:1024px){grid-template-columns: 1fr 1fr;} gap: 24px; margin-bottom: 24px;">
+          <!-- Camera Scanner & Manual Input Box -->
+          <div class="section-box" style="margin-bottom: 0;">
+            <h2 class="section-title" style="font-size: 16px; margin-bottom: 12px;">Scan or Enter Barcode</h2>
+
+            <!-- Camera Viewfinder Box -->
+            <div id="cameraViewportWrapper" style="display: none; margin-bottom: 16px;" class="scanner-viewport-box">
+              <div id="scannerViewfinder"></div>
+              <div class="scanner-laser-line"></div>
+            </div>
+
+            <!-- Manual Barcode Search Form -->
+            <form id="barcodeScanForm">
+              <div class="form-group">
+                <label class="form-label">Barcode Input (USB / Bluetooth Auto-Detected)</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="scanInput" class="form-input" placeholder="Scan or type barcode (e.g. 890123456701)..." autofocus>
+                  <button type="submit" class="btn-primary" style="white-space: nowrap;">Search</button>
+                  <button type="button" id="clearScanBtn" class="btn-secondary">Clear</button>
+                </div>
+              </div>
+            </form>
+
+            <p style="font-size: 11px; color: var(--color-muted); font-weight: 600;">
+              💡 <strong>USB Scanner Detection:</strong> Plug in your USB barcode scanner and pull the trigger. The ERP will automatically detect the input.
+            </p>
+          </div>
+
+          <!-- Scanner Results Container -->
+          <div id="scanResultContainer">
+            <div className="section-box" style="padding: 40px; text-align: center; border: 2px dashed var(--color-border);">
+              <p style="font-size: 14px; font-weight: 700; color: var(--color-muted);">
+                Scan a product barcode to view stock, update inventory, or add a new item.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Scans History -->
+        <div class="section-box">
+          <h2 class="section-title" style="font-size: 16px; margin-bottom: 12px;">Recent Barcode Scans</h2>
+          <div id="recentScansList" style="display: flex; flex-direction: column; gap: 8px;">
+            <p style="font-size: 12px; color: var(--color-muted);">No recent scans in this session.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: INVENTORY DIRECTORY -->
+      <section id="viewInventory" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">Stationery Inventory Module</h1>
+            <p class="page-header-sub">Manage all inventory items, barcodes, ream costs, retail rates & quantities.</p>
+          </div>
+          <div class="page-actions-group">
+            <button type="button" class="btn-secondary" id="exportInventoryPdfBtn" style="padding: 8px 14px; min-height: 40px; font-size: 12px;">
+              <span>📄 EXPORT PDF REPORT</span>
+            </button>
+            <span class="count-pill" id="inventoryCountBadge" style="font-size: 13px; padding: 6px 12px;">0 Items</span>
+            <button type="button" class="btn-primary" data-action="add-item">+ ADD ITEM</button>
+          </div>
+        </div>
+
+        <!-- Filters Bar -->
+        <div class="section-box" style="padding: 16px; margin-bottom: 24px;">
+          <div style="margin-bottom: 12px;">
+            <input type="text" id="invSearchInput" class="form-input" style="height: 42px; font-size: 14px;" placeholder="Search name, barcode (890123...) or category...">
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+            <div>
+              <label class="form-label">Category</label>
+              <select id="invCatSelect" class="form-input" style="height: 40px; font-size: 12px; font-weight: 800;"></select>
+            </div>
+
+            <div>
+              <label class="form-label">Stock Status</label>
+              <select id="invStatusSelect" class="form-input" style="height: 40px; font-size: 12px; font-weight: 800;">
+                <option value="all">All Statuses</option>
+                <option value="in-stock">In Stock</option>
+                <option value="low-stock">Low Stock (Urgent)</option>
+                <option value="out-of-stock">Out of Stock (Zero Qty)</option>
+                <option value="no-data">No Data (Blank Qty)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label">Sort By</label>
+              <select id="invSortSelect" class="form-input" style="height: 40px; font-size: 12px; font-weight: 800;">
+                <option value="urgency">Urgency (Lowest Qty First)</option>
+                <option value="name">Item Name (A-Z)</option>
+                <option value="category">Category</option>
+                <option value="quantity">Quantity Level</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inventory List / Table -->
+        <div id="inventoryCardsContainer" class="mobile-cards-container"></div>
+
+        <div class="desktop-table-container">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Item / Description</th>
+                <th>Barcode</th>
+                <th style="text-align: right;">Ream Cost</th>
+                <th style="text-align: right;">Cost Rate (Sell)</th>
+                <th style="text-align: right;">Retail Rate (Shop)</th>
+                <th style="text-align: center;">Current Qty</th>
+                <th style="text-align: center;">Limit</th>
+                <th style="text-align: center;">Status</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 4: CATEGORIES OVERVIEW -->
+      <section id="viewCategories" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">Categories Module</h1>
+            <p class="page-header-sub">Manage stationery categories and line items.</p>
+          </div>
+          <button type="button" class="btn-primary" data-action="add-category">+ ADD CATEGORY</button>
+        </div>
+
+        <div id="categoriesGrid" class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));"></div>
+      </section>
+
+      <!-- VIEW 5: CATEGORY DETAIL VIEW -->
+      <section id="viewCategoryDetail" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <a href="#" data-nav="categories" style="font-size: 12px; font-weight: 800; color: var(--color-red); text-decoration: none;">← Back to Categories</a>
+            <h1 class="page-header-title" id="catDetailTitle" style="margin-top: 4px;">Category Items</h1>
+            <p class="page-header-sub" id="catDetailItemsCount">0 Items</p>
+          </div>
+          <button type="button" class="btn-primary" data-action="add-item">+ ADD ITEM TO CATEGORY</button>
+        </div>
+
+        <div id="catDetailCardsContainer" class="mobile-cards-container"></div>
+
+        <div class="desktop-table-container">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Item / Description</th>
+                <th>Barcode</th>
+                <th style="text-align: right;">Ream Cost</th>
+                <th style="text-align: right;">Cost Rate (Sell)</th>
+                <th style="text-align: right;">Retail Rate (Shop)</th>
+                <th style="text-align: center;">Current Qty</th>
+                <th style="text-align: center;">Limit</th>
+                <th style="text-align: center;">Status</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="catDetailTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 6: LOW STOCK MODULE -->
+      <section id="viewLowStock" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">🚨 Low Stock Module</h1>
+            <p class="page-header-sub">All items currently equal to or below the low stock limit.</p>
+          </div>
+          <span class="count-pill" id="lowStockPageCount" style="font-size: 13px; padding: 6px 12px;">0 Low Stock Items</span>
+        </div>
+
+        <div id="lowStockCardsContainer" class="mobile-cards-container"></div>
+
+        <div class="desktop-table-container">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Item / Description</th>
+                <th>Barcode</th>
+                <th style="text-align: right;">Ream Cost</th>
+                <th style="text-align: right;">Cost Rate (Sell)</th>
+                <th style="text-align: right;">Retail Rate (Shop)</th>
+                <th style="text-align: center;">Current Qty</th>
+                <th style="text-align: center;">Limit</th>
+                <th style="text-align: center;">Status</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="lowStockTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 7: OUT OF STOCK MODULE -->
+      <section id="viewOutOfStock" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">⛔ Out of Stock Module</h1>
+            <p class="page-header-sub">Items with Quantity = 0 requiring immediate replenishment.</p>
+          </div>
+          <span class="count-pill" id="outOfStockPageCount" style="font-size: 13px; padding: 6px 12px; background-color: var(--color-red);">0 Out of Stock Items</span>
+        </div>
+
+        <div id="outOfStockCardsContainer" class="mobile-cards-container"></div>
+
+        <div class="desktop-table-container">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Item / Description</th>
+                <th>Barcode</th>
+                <th style="text-align: right;">Ream Cost</th>
+                <th style="text-align: right;">Cost Rate (Sell)</th>
+                <th style="text-align: right;">Retail Rate (Shop)</th>
+                <th style="text-align: center;">Current Qty</th>
+                <th style="text-align: center;">Limit</th>
+                <th style="text-align: center;">Status</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="outOfStockTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW: RAW MATERIALS & SUPPLIES MODULE -->
+      <section id="viewRawMaterials" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">📄 Raw Materials & Supplies Stock</h1>
+            <p class="page-header-sub">Internal paper reams, board reams, lubricant cans, ink, and operational stock.</p>
+          </div>
+          <button type="button" id="openAddRawMatBtn" class="btn-primary" data-action="add-raw-material" onclick="openAddRawMaterialModal()">+ Add Raw Material</button>
+        </div>
+
+        <!-- Metric Summary Cards -->
+        <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
+          <div class="metric-card" style="border-left: 4px solid var(--color-blue);">
+            <div class="metric-label">Total Material Items</div>
+            <div class="metric-value" id="rawMatTotalItems">0</div>
+          </div>
+          <div class="metric-card" style="border-left: 4px solid var(--color-green);">
+            <div class="metric-label">Total Stock Value</div>
+            <div class="metric-value" id="rawMatTotalValue">LKR 0.00</div>
+          </div>
+          <div class="metric-card" style="border-left: 4px solid var(--color-red);">
+            <div class="metric-label">Low Stock Alerts</div>
+            <div class="metric-value" id="rawMatLowAlerts" style="color: var(--color-red);">0</div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+          <input type="text" id="rawMatSearchInput" class="form-input" placeholder="Search material name or category..." style="flex: 2; min-width: 200px;">
+          <select id="rawMatCategoryFilter" class="form-input" style="flex: 1; min-width: 150px;">
+            <option value="">All Categories</option>
+            <option value="Paper">Paper</option>
+            <option value="Board">Board</option>
+            <option value="Oil/Lubricant">Oil / Lubricant</option>
+            <option value="Ink/Chemicals">Ink / Chemicals</option>
+            <option value="Packaging">Packaging</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <!-- Cards View for Mobile -->
+        <div id="rawMatCardsContainer" class="mobile-cards-container"></div>
+
+        <!-- Table View for Desktop -->
+        <div class="desktop-table-container">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Material Name</th>
+                <th style="text-align: right;">Unit Price / Cost</th>
+                <th style="text-align: center;">Stock Qty</th>
+                <th style="text-align: center;">Unit Type</th>
+                <th style="text-align: right;">Total Stock Value</th>
+                <th style="text-align: center;">Status</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rawMatTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 8: SALES HUB / OVERVIEW -->
+      <section id="viewSales" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">🧾 Sales Management Hub</h1>
+            <p class="page-header-sub">Process customer sales, create bills, and track revenue.</p>
+          </div>
+          <div class="page-actions-group">
+            <button type="button" class="btn-primary" data-nav="new-sale">➕ NEW SALE / BILL</button>
+            <button type="button" class="btn-secondary" data-nav="sales-history">📜 SALES HISTORY</button>
+          </div>
+        </div>
+
+        <div class="metrics-grid" style="margin-bottom: 24px;">
+          <div class="metric-card">
+            <span class="metric-title">TODAY'S REVENUE</span>
+            <span class="metric-value" id="salesHubTodayRevenue" style="color: var(--color-emerald);">LKR 0.00</span>
+            <span class="metric-sub" id="salesHubTodayBills">0 Bills Created Today</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-title">TOTAL INVOICES</span>
+            <span class="metric-value" id="salesHubTotalBills">0</span>
+            <span class="metric-sub">Recorded Sales Transactions</span>
+          </div>
+        </div>
+
+        <div class="section-box">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">RECENT SALES TRANSACTIONS</h2>
+              <p style="font-size: 12px; color: var(--color-muted); font-weight: 600;">Latest customer bills issued</p>
+            </div>
+            <button type="button" class="btn-secondary" data-nav="sales-history" style="font-size: 12px; padding: 4px 10px;">View All Sales →</button>
+          </div>
+
+          <div id="salesHubCardsContainer" class="mobile-cards-container"></div>
+          <div class="desktop-table-container">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Invoice #</th>
+                  <th>Date & Time</th>
+                  <th>Customer</th>
+                  <th>Payment Method</th>
+                  <th style="text-align: right;">Subtotal</th>
+                  <th style="text-align: right;">Discount</th>
+                  <th style="text-align: right;">Grand Total</th>
+                  <th style="text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="salesHubTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 9: NEW SALE / CREATE BILL -->
+      <section id="viewNewSale" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">🧾 NEW SALE / CREATE BILL</h1>
+            <p class="page-header-sub">Select inventory items, set selling prices, and issue customer invoices.</p>
+          </div>
+          <div class="page-actions-group">
+            <button type="button" id="openItemPickerBtn" class="btn-primary" style="padding: 10px 18px; font-size: 13px;">
+              ➕ ADD ITEM TO SALE
+            </button>
+          </div>
+        </div>
+
+        <!-- Top Metadata & Customer Header Card -->
+        <div class="section-box" style="margin-bottom: 20px;">
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Invoice Number</label>
+              <input type="text" id="newSaleInvoiceNum" class="form-input" readonly style="font-weight: 800; background-color: var(--color-light-bg); font-family: monospace;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sale Date & Time</label>
+              <input type="text" id="newSaleDate" class="form-input" readonly style="background-color: var(--color-light-bg);">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Customer Name (Optional)</label>
+              <input type="text" id="newSaleCustomer" class="form-input" placeholder="e.g. Walk-in Customer / Perera Books...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Payment Method *</label>
+              <select id="newSalePaymentMethod" class="form-input" required>
+                <option value="Cash" selected>Cash</option>
+                <option value="Card">Credit / Debit Card</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label">Notes / Remarks (Optional)</label>
+              <input type="text" id="newSaleNotes" class="form-input" placeholder="e.g. Special discount given, delivery note...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Sale Items Table Card -->
+        <div class="section-box" style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">Sale Line Items</h3>
+            <button type="button" id="openItemPickerBtn2" class="btn-secondary" style="font-size: 12px; padding: 6px 12px;">
+              + Search & Add Item
+            </button>
+          </div>
+
+          <!-- Sale Items Container for Mobile Cards -->
+          <div id="newSaleMobileCardsContainer" class="mobile-cards-container"></div>
+
+          <!-- Items Table for Desktop -->
+          <div class="desktop-table-container">
+            <table class="erp-table" id="newSaleLinesTable">
+              <thead>
+                <tr>
+                  <th style="min-width: 220px;">Item / Description</th>
+                  <th style="text-align: center; width: 90px;">In Stock</th>
+                  <th style="text-align: right; width: 140px;">Cost Rate (LKR) *</th>
+                  <th style="text-align: center; width: 100px;">Qty (PCS) *</th>
+                  <th style="text-align: right; width: 160px;">Discount (Per Line)</th>
+                  <th style="text-align: right; width: 130px;">Line Total (LKR)</th>
+                  <th style="text-align: center; width: 60px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="newSaleLinesTableBody">
+                <!-- Populated dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="emptySaleLinesMessage" style="text-align: center; padding: 32px 16px; color: var(--color-muted); background-color: var(--color-light-bg); border-radius: var(--radius-md); margin-top: 12px;">
+            <div style="font-size: 32px; margin-bottom: 8px;">🛒</div>
+            <p style="font-weight: 700; margin-bottom: 8px;">No items added to this bill yet.</p>
+            <button type="button" class="btn-primary" onclick="openItemPickerModal()" style="font-size: 12px;">+ Select Items From Inventory</button>
+          </div>
+        </div>
+
+        <!-- Bottom Totals & Payment Section -->
+        <div class="sale-summary-wrapper">
+          <div class="sale-summary-card">
+            <div class="summary-row">
+              <span>Subtotal (Before Discount):</span>
+              <strong id="newSaleSubtotalText">LKR 0.00</strong>
+            </div>
+            <div class="summary-row">
+              <span>Total Discount:</span>
+              <strong id="newSaleDiscountText" style="color: var(--color-emerald);">- LKR 0.00</strong>
+            </div>
+            <div class="summary-row grand-total-row">
+              <span>GRAND TOTAL:</span>
+              <strong id="newSaleGrandTotalText">LKR 0.00</strong>
+            </div>
+
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--color-border);">
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label class="form-label">Amount Paid by Customer (LKR)</label>
+                <input type="number" id="newSaleAmountPaid" class="form-input" min="0" step="0.01" placeholder="Enter amount paid..." style="font-size: 16px; font-weight: 800;">
+              </div>
+              <div class="summary-row" style="font-size: 15px;">
+                <span>Change / Balance:</span>
+                <strong id="newSaleBalanceText" style="color: var(--color-red); font-size: 18px; font-weight: 900;">LKR 0.00</strong>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+              <button type="button" class="btn-secondary" data-nav="sales" style="flex: 1;">Cancel</button>
+              <button type="button" id="saveSaleBtn" class="btn-primary" style="flex: 2; font-size: 14px; padding: 12px;">
+                💾 SAVE SALE & ISSUE BILL
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 10: SALES HISTORY -->
+      <section id="viewSalesHistory" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">📜 Sales History & Invoice Archive</h1>
+            <p class="page-header-sub">Search, filter, inspect, and reprint past sales invoices.</p>
+          </div>
+          <button type="button" class="btn-primary" data-nav="new-sale">➕ NEW SALE</button>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="section-box" style="padding: 16px; margin-bottom: 20px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div>
+              <label class="form-label">Search Invoices</label>
+              <input type="text" id="salesHistorySearch" class="form-input" placeholder="Invoice #, customer name, item...">
+            </div>
+            <div>
+              <label class="form-label">Payment Method</label>
+              <select id="salesHistoryPaymentFilter" class="form-input">
+                <option value="">All Payment Methods</option>
+                <option value="Cash">Cash</option>
+                <option value="Card">Credit / Debit Card</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Filter Date</label>
+              <input type="date" id="salesHistoryDateFilter" class="form-input">
+            </div>
+            <div style="display: flex; align-items: flex-end;">
+              <button type="button" id="salesHistoryResetFilter" class="btn-secondary" style="width: 100%; min-height: 40px; font-size: 12px;">Reset Filters</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sales History Table -->
+        <div id="salesHistoryCardsContainer" class="mobile-cards-container"></div>
+        <div class="desktop-table-container">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Date & Time</th>
+                <th>Customer</th>
+                <th>Payment</th>
+                <th style="text-align: right;">Subtotal</th>
+                <th style="text-align: right;">Discount</th>
+                <th style="text-align: right;">Grand Total</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="salesHistoryTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 11: SALE DETAILS & PRINTABLE INVOICE -->
+      <section id="viewSaleDetails" class="view-pane" style="display: none;">
+        <div class="page-header-row no-print">
+          <div>
+            <a href="#" data-nav="sales-history" style="font-size: 12px; font-weight: 800; color: var(--color-red); text-decoration: none;">← Back to Sales History</a>
+            <h1 class="page-header-title" style="margin-top: 4px;" id="detailInvoiceTitle">Invoice Details</h1>
+          </div>
+          <div class="page-actions-group">
+            <button type="button" class="btn-primary" id="downloadInvoicePdfBtn">📄 DOWNLOAD BILL PDF</button>
+            <button type="button" class="btn-secondary" onclick="window.print()">🖨️ PRINT BILL</button>
+            <button type="button" class="btn-secondary" data-nav="new-sale">➕ NEW SALE</button>
+          </div>
+        </div>
+
+        <!-- Printable Invoice Container -->
+        <div class="section-box printable-invoice-card" id="printableInvoice">
+          <div class="invoice-header">
+            <div>
+              <h2 class="brand-title" style="font-size: 24px; font-weight: 900;">ATASO <span>ERP</span></h2>
+              <p style="font-size: 12px; color: var(--color-muted); font-weight: 700;">Stationery & Book Inventory Management</p>
+              <p style="font-size: 11px; color: var(--color-muted);">Main Street, Book Market • Tel: +94 77 123 4567</p>
+            </div>
+            <div style="text-align: right;">
+              <h3 style="font-size: 18px; font-weight: 900; color: var(--color-red);" id="invDetailNum">INV-000000</h3>
+              <p style="font-size: 12px; font-weight: 700;" id="invDetailDate">Date: —</p>
+              <p style="font-size: 12px;" id="invDetailPaymentMethod">Payment: Cash</p>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 20px; padding: 12px; background-color: var(--color-light-bg); border-radius: var(--radius-sm);">
+            <div style="font-size: 11px; font-weight: 800; color: var(--color-muted); text-transform: uppercase;">Customer</div>
+            <div style="font-size: 14px; font-weight: 900;" id="invDetailCustomer">Walk-in Customer</div>
+            <div style="font-size: 12px; color: var(--color-muted); margin-top: 4px;" id="invDetailNotes"></div>
+          </div>
+
+          <!-- Items Breakdown -->
+          <table class="erp-table invoice-items-table" style="margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Item / Description</th>
+                <th style="text-align: right;">Cost Rate (LKR)</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Discount</th>
+                <th style="text-align: right;">Amount (LKR)</th>
+              </tr>
+            </thead>
+            <tbody id="invDetailItemsTableBody"></tbody>
+          </table>
+
+          <!-- Financial Breakdown -->
+          <div style="display: flex; justify-content: flex-end;">
+            <div style="min-width: 280px;">
+              <div class="summary-row">
+                <span>Subtotal:</span>
+                <strong id="invDetailSubtotal">LKR 0.00</strong>
+              </div>
+              <div class="summary-row">
+                <span>Total Discount:</span>
+                <strong id="invDetailDiscount">LKR 0.00</strong>
+              </div>
+              <div class="summary-row grand-total-row" style="font-size: 18px;">
+                <span>GRAND TOTAL:</span>
+                <strong id="invDetailGrandTotal">LKR 0.00</strong>
+              </div>
+              <div class="summary-row" style="margin-top: 8px;">
+                <span>Amount Paid:</span>
+                <strong id="invDetailPaid">LKR 0.00</strong>
+              </div>
+              <div class="summary-row">
+                <span>Change / Balance:</span>
+                <strong id="invDetailBalance">LKR 0.00</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 30px; text-align: center; border-top: 1px solid var(--color-border); padding-top: 16px; font-size: 11px; color: var(--color-muted);">
+            Thank you for your business! • Ataso Stationery ERP
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 8: EXPANDED SETTINGS -->
+      <section id="viewSettings" class="view-pane" style="display: none;">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-header-title">ERP Settings & Configuration</h1>
+            <p class="page-header-sub">Configure stock limits, theme preferences & database parameters.</p>
+          </div>
+        </div>
+
+        <!-- Inventory Settings -->
+        <div class="section-box urgent-low-box">
+          <h2 class="section-title" style="margin-bottom: 12px;">⚙️ LOW STOCK THRESHOLD</h2>
+          <p style="font-size: 13px; color: var(--color-muted); margin-bottom: 16px;">
+            Central stock limit. Items with Qty &gt; 0 and Qty &le; Threshold trigger <strong style="color: var(--color-red);">LOW STOCK</strong> status.
+          </p>
+
+          <form id="settingsForm">
+            <div class="form-group" style="max-width: 240px;">
+              <label class="form-label">Threshold Quantity</label>
+              <input type="number" id="thresholdInput" class="form-input" min="0" step="1" required>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 8px;">
+              <span>💾 SAVE CENTRAL THRESHOLD</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Appearance Settings -->
+        <div class="section-box">
+          <h2 class="section-title" style="margin-bottom: 12px;">🎨 APPEARANCE & THEME</h2>
+          <p style="font-size: 13px; color: var(--color-muted); margin-bottom: 16px;">
+            Choose between Light Mode and Dark Mode for comfortable daily operation.
+          </p>
+          <div style="display: flex; gap: 12px;">
+            <button type="button" class="btn-secondary" onclick="setERPTheme('light')">☀️ Light Mode</button>
+            <button type="button" class="btn-dark" onclick="setERPTheme('dark')">🌙 Dark Mode</button>
+          </div>
+        </div>
+
+        <!-- Seed Reset Utility -->
+        <div class="section-box" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h3 style="font-size: 15px; font-weight: 800;">Reset Stationery Seed Data</h3>
+            <p style="font-size: 12px; color: var(--color-muted); margin-top: 2px;">Restores initial 126 items across 8 categories with sample barcodes.</p>
+          </div>
+          <button type="button" class="btn-dark" onclick="handleResetData()">
+            <span>🔄 Reset Seed Data</span>
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Mobile Floating Action Button (FAB) -->
+  <button type="button" class="mobile-fab" data-action="add-item" title="Add New Item">+</button>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="mobile-bottom-nav">
+    <a href="#" class="bottom-nav-item active" data-nav="dashboard">
+      <div class="bottom-icon-wrap">🏠</div>
+      <span>Dashboard</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="sales">
+      <div class="bottom-icon-wrap">🧾</div>
+      <span>Sales</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="new-sale">
+      <div class="bottom-icon-wrap">➕</div>
+      <span>+ Bill</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="inventory">
+      <div class="bottom-icon-wrap">📦</div>
+      <span>Stock</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="scan">
+      <div class="bottom-icon-wrap">📷</div>
+      <span>Scanner</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="raw-materials">
+      <div class="bottom-icon-wrap">📄</div>
+      <span>Raw Mat</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="low-stock">
+      <div class="bottom-icon-wrap">
+        🚨
+        <span class="count-pill" id="bottomLowBadge" style="position: absolute; top: -6px; right: -10px; font-size: 9px; padding: 1px 4px;">0</span>
+      </div>
+      <span>Alerts</span>
+    </a>
+  </nav>
+
+  <!-- MODAL 1: ADD / EDIT ITEM MODAL -->
+  <div id="addItemModalOverlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); margin-bottom: 16px;">
+        <h2 style="font-size: 18px; font-weight: 900;" id="addItemModalTitle">+ ADD NEW INVENTORY ITEM</h2>
+        <button type="button" data-close-modal style="background: none; border: none; font-size: 20px; font-weight: 900; cursor: pointer; color: var(--color-muted);">✕</button>
+      </div>
+
+      <form id="addItemForm">
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0;">Category *</label>
+            <button type="button" data-action="add-category" style="background: none; border: none; font-size: 11px; font-weight: 800; color: var(--color-red); cursor: pointer;">+ Add New Category</button>
+          </div>
+          <select id="itemFormCategory" class="form-input" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Item Name *</label>
+          <input type="text" id="itemFormName" class="form-input" placeholder="e.g. Exercise A5 80P =" required>
+        </div>
+
+        <!-- Barcode Field -->
+        <div class="form-group">
+          <label class="form-label">Barcode (Scanned / Optional)</label>
+          <input type="text" id="itemFormBarcode" class="form-input" placeholder="e.g. 890123456701">
+        </div>
+
+        <div class="utility-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="form-group">
+            <label class="form-label">Ream Cost (Amount / Value)</label>
+            <input type="text" id="itemFormReamCost" class="form-input" placeholder="e.g. 1500 or 500">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cost Rate / Selling Price (LKR)</label>
+            <input type="number" id="itemFormCost" class="form-input" step="0.01" min="0" placeholder="Selling price e.g. 250">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Retail Rate / Shop Rate (LKR)</label>
+            <input type="number" id="itemFormRate" class="form-input" step="0.01" min="0" placeholder="Shop rate e.g. 300">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Quantity</label>
+          <input type="number" id="itemFormQty" class="form-input" step="1" min="0" placeholder="Leave blank for NO DATA">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap;">
+          <button type="button" data-close-modal class="btn-secondary" style="flex: 1;">Cancel</button>
+          <button type="submit" class="btn-primary" style="flex: 2;">💾 SAVE ITEM</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADD / EDIT CATEGORY MODAL -->
+  <div id="addCategoryModalOverlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 440px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); margin-bottom: 16px;">
+        <h2 style="font-size: 18px; font-weight: 900;" id="addCategoryTitle">+ ADD NEW CATEGORY</h2>
+        <button type="button" data-close-modal style="background: none; border: none; font-size: 20px; font-weight: 900; cursor: pointer; color: var(--color-muted);">✕</button>
+      </div>
+
+      <form id="addCategoryForm">
+        <div class="form-group">
+          <label class="form-label">Category Name *</label>
+          <input type="text" id="categoryNameInput" class="form-input" placeholder="e.g. Special Notebooks" required>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="button" data-close-modal class="btn-secondary" style="flex: 1;">Cancel</button>
+          <button type="submit" class="btn-primary" style="flex: 2;">Create Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: STOCK UPDATE & MOVEMENT MODAL -->
+  <div id="stockUpdateModalOverlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 460px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); margin-bottom: 16px;">
+        <div>
+          <span class="category-pill" id="stockUpdateCategory">Category</span>
+          <h2 style="font-size: 18px; font-weight: 900;" id="stockUpdateTitle">Update Stock</h2>
+        </div>
+        <button type="button" data-close-modal style="background: none; border: none; font-size: 20px; font-weight: 900; cursor: pointer; color: var(--color-muted);">✕</button>
+      </div>
+
+      <div style="margin-bottom: 16px; background-color: var(--color-light-bg); padding: 12px; border-radius: var(--radius-md); text-align: center;">
+        <span style="font-size: 11px; font-weight: 800; color: var(--color-muted); text-transform: uppercase;">Current Stock Level</span>
+        <div style="font-size: 28px; font-weight: 900;" id="stockUpdateCurrentQty">0 PCS</div>
+      </div>
+
+      <form id="stockUpdateForm">
+        <!-- Movement Type Selector Pills -->
+        <div class="form-group">
+          <label class="form-label">Update Operation</label>
+          <div class="movement-type-pills">
+            <div id="pillStockIn" class="type-pill active-in" onclick="selectMovementType('STOCK_IN')">+ Add Stock</div>
+            <div id="pillStockOut" class="type-pill" onclick="selectMovementType('STOCK_OUT')">- Remove Stock</div>
+            <div id="pillStockAdjust" class="type-pill" onclick="selectMovementType('STOCK_ADJUSTMENT')">= Set Stock</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" id="stockUpdateQtyLabel">Quantity (PCS)</label>
+          <input type="number" id="stockUpdateQtyInput" class="form-input" min="0" step="1" placeholder="Enter quantity PCS..." required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Reason / Note (Optional)</label>
+          <input type="text" id="stockUpdateReasonInput" class="form-input" placeholder="e.g. Restock shipment, Damaged item, Audit adjustment...">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="button" data-close-modal class="btn-secondary" style="flex: 1;">Cancel</button>
+          <button type="submit" class="btn-primary" style="flex: 2;">SAVE STOCK UPDATE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: ITEM DETAIL SPECIFICATIONS MODAL -->
+  <div id="itemDetailModalOverlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); margin-bottom: 16px;">
+        <div>
+          <span class="category-pill" id="detailCategory">Category</span>
+          <h2 style="font-size: 20px; font-weight: 900;" id="detailItemName">Item Details</h2>
+        </div>
+        <span id="detailStatusBadge" class="status-badge badge-in-stock">IN STOCK</span>
+      </div>
+
+      <div class="card-meta" style="grid-template-columns: repeat(3, 1fr); padding: 16px; font-size: 13px; gap: 12px;">
+        <div>
+          <span style="color: var(--color-muted); display: block;">Stock Quantity</span>
+          <strong id="detailQty" style="font-size: 22px; font-weight: 900; color: var(--color-red);">0 PCS</strong>
+        </div>
+        <div>
+          <span style="color: var(--color-muted); display: block;">Barcode</span>
+          <strong id="detailBarcode" style="font-size: 13px; font-family: monospace;">—</strong>
+        </div>
+        <div>
+          <span style="color: var(--color-muted); display: block;">Ream Cost</span>
+          <strong id="detailReamCost" style="font-size: 14px;">—</strong>
+        </div>
+        <div>
+          <span style="color: var(--color-muted); display: block;">Cost Rate (Selling Price)</span>
+          <strong id="detailCostRate" style="font-size: 15px; color: var(--color-red); font-weight: 800;">—</strong>
+        </div>
+        <div>
+          <span style="color: var(--color-muted); display: block;">Retail Rate (Shop Price)</span>
+          <strong id="detailRetailRate" style="font-size: 15px;">—</strong>
+        </div>
+      </div>
+
+      <!-- Recent Movement Log for Item -->
+      <div style="margin-top: 16px;">
+        <h4 style="font-size: 12px; font-weight: 900; text-transform: uppercase; color: var(--color-muted); margin-bottom: 8px;">Stock Movement Log</h4>
+        <div id="detailMovementsLog" style="max-height: 120px; overflow-y: auto; font-size: 11px; background-color: var(--color-light-bg); border-radius: var(--radius-sm); padding: 8px;">
+          <p style="color: var(--color-muted);">No stock movements recorded yet.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
+        <button type="button" id="detailSellBtn" class="btn-primary" style="flex: 2; font-weight: 800;">🛒 Sell Item</button>
+        <button type="button" id="detailQtyBtn" class="btn-dark" style="flex: 1;">⚡ Update Stock</button>
+        <button type="button" id="detailEditBtn" class="btn-secondary" style="flex: 1;">✏️ Edit</button>
+        <button type="button" id="detailDeleteBtn" class="btn-danger-icon btn-icon" style="min-height: 40px; padding: 0 12px; border-radius: var(--radius-sm);" title="Delete Item">🗑️</button>
+      </div>
+
+      <div style="margin-top: 16px; text-align: right;">
+        <button type="button" data-close-modal class="btn-secondary" style="font-size: 12px;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: ITEM PICKER MODAL FOR SALES (NO BARCODE SCANNING) -->
+  <div id="itemPickerModalOverlay" class="modal-overlay" style="display: none; z-index: 70;">
+    <div class="modal-content" style="max-width: 650px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); margin-bottom: 16px;">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 900;">🛒 Select Item to Add to Sale</h2>
+          <p style="font-size: 12px; color: var(--color-muted);">Search inventory by item name or category</p>
+        </div>
+        <button type="button" data-close-modal style="background: none; border: none; font-size: 20px; font-weight: 900; cursor: pointer; color: var(--color-muted);">✕</button>
+      </div>
+
+      <!-- Search Controls -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 16px;">
+        <input type="text" id="pickerSearchInput" class="form-input" placeholder="Search item name or category...">
+        <select id="pickerCategoryFilter" class="form-input">
+          <option value="">All Categories</option>
+        </select>
+      </div>
+
+      <!-- Scrollable Items List -->
+      <div id="pickerItemsList" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+        <!-- Populated dynamically via JS -->
+      </div>
+
+      <div style="margin-top: 16px; text-align: right; border-top: 1px solid var(--color-border); padding-top: 12px;">
+        <button type="button" data-close-modal class="btn-secondary" style="font-size: 12px;">Done Selecting</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT RAW MATERIAL -->
+  <div id="rawMaterialModalOverlay" class="modal-overlay" style="display: none; z-index: 80;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: 12px; margin-bottom: 16px;">
+        <h2 style="font-size: 18px; font-weight: 900;" id="rawMaterialModalTitle">➕ Add Raw Material</h2>
+        <button type="button" data-close-modal style="background: none; border: none; font-size: 20px; font-weight: 900; cursor: pointer; color: var(--color-muted);">✕</button>
+      </div>
+      <form id="rawMaterialForm" onsubmit="event.preventDefault(); handleSaveRawMaterialForm();">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label">Material Name *</label>
+          <input type="text" id="rawFormName" class="form-input" placeholder="e.g. A4 Paper Reams 80gsm, Duplex Board" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select id="rawFormCategory" class="form-input">
+              <option value="Paper">Paper</option>
+              <option value="Board">Board</option>
+              <option value="Oil/Lubricant">Oil / Lubricant</option>
+              <option value="Ink/Chemicals">Ink / Chemicals</option>
+              <option value="Packaging">Packaging</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit Type</label>
+            <select id="rawFormUnitType" class="form-input">
+              <option value="Reams">Reams</option>
+              <option value="Cans">Cans</option>
+              <option value="Sheets">Sheets</option>
+              <option value="Kgs">Kgs</option>
+              <option value="Liters">Liters</option>
+              <option value="Pcs">Pcs</option>
+              <option value="Boxes">Boxes</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label class="form-label">Unit Price / Cost (LKR)</label>
+            <input type="number" id="rawFormCost" class="form-input" min="0" step="0.01" placeholder="e.g. 1850.00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Stock Quantity</label>
+            <input type="number" id="rawFormQty" class="form-input" min="0" step="1" placeholder="e.g. 50">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label">Low Stock Alert Level (Threshold)</label>
+          <input type="number" id="rawFormThreshold" class="form-input" min="1" step="1" value="5">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label">Notes / Description</label>
+          <input type="text" id="rawFormNotes" class="form-input" placeholder="e.g. Brand specs, supplier details">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" data-close-modal class="btn-secondary" style="flex: 1;">Cancel</button>
+          <button type="submit" class="btn-primary" style="flex: 1; font-weight: 800;">Save Material</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: USE / ADJUST RAW MATERIAL -->
+  <div id="rawMaterialAdjustModalOverlay" class="modal-overlay" style="display: none; z-index: 85;">
+    <div class="modal-content" style="max-width: 450px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: 12px; margin-bottom: 16px;">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 900;" id="rawAdjustModalTitle">⚡ Adjust Material Stock</h2>
+          <p style="font-size: 12px; color: var(--color-muted);" id="rawAdjustModalSub">Material item</p>
+        </div>
+        <button type="button" data-close-modal style="background: none; border: none; font-size: 20px; font-weight: 900; cursor: pointer; color: var(--color-muted);">✕</button>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-bottom: 16px;">
+        <button type="button" id="rawPillUse" class="type-pill active-out" style="flex: 1; font-weight: 800;" onclick="selectRawAdjustType('USE')">🏭 Use Material (-)</button>
+        <button type="button" id="rawPillRestock" class="type-pill" style="flex: 1; font-weight: 800;" onclick="selectRawAdjustType('RESTOCK')">📦 Restock (+)</button>
+        <button type="button" id="rawPillSet" class="type-pill" style="flex: 1; font-weight: 800;" onclick="selectRawAdjustType('SET_EXACT')">✏️ Set Exact (=)</button>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" id="rawAdjustQtyLabel">Quantity to Issue / Use</label>
+        <input type="number" id="rawAdjustQtyInput" class="form-input" min="1" step="1" placeholder="Enter quantity..." required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label class="form-label">Reason / Production Note (Optional)</label>
+        <input type="text" id="rawAdjustReasonInput" class="form-input" placeholder="e.g. Issued 5 reams for Invoice #104">
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="button" data-close-modal class="btn-secondary" style="flex: 1;">Cancel</button>
+        <button type="button" class="btn-primary" style="flex: 1; font-weight: 800;" onclick="handleSaveRawMaterialAdjust()">Confirm Adjustment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: DESTRUCTIVE CONFIRMATION DIALOG -->
+  <div id="confirmModalOverlay" class="modal-overlay" style="display: none; z-index: 60;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+      <div style="font-size: 36px; margin-bottom: 8px;">⚠️</div>
+      <h2 style="font-size: 18px; font-weight: 900; margin-bottom: 8px;" id="confirmTitle">Confirm Action</h2>
+      <p style="font-size: 13px; color: var(--color-muted); margin-bottom: 20px;" id="confirmMessage">Are you sure?</p>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="button" id="confirmCancelBtn" class="btn-secondary" style="flex: 1;">Cancel</button>
+        <button type="button" id="confirmOkBtn" class="btn-primary btn-danger" style="flex: 1;">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load App Scripts (Flat Architecture) -->
+  <script src="config.js?v=1.2.3"></script>
+  <script src="seed.js?v=1.2.3"></script>
+  <script src="db.js?v=1.2.3"></script>
+  <script src="app.js?v=1.2.3"></script>
+</body>
+</html>
